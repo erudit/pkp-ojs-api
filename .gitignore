@@ -71,3 +71,5 @@ target/
 # dotenv
 .env
 
+# data
+db.sqlite3
