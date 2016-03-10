@@ -38,3 +38,10 @@ A consumer service registered with an OJS instance can have access to its Journa
 ### Configure access to OJS instance API
 
 ### Call an OJS instance API
+
+## License
+
+This program is release under the GNU GPLv3 license. A copy of this license is
+available in the file [LICENSE][license].
+
+[license]: ./LICENSE
