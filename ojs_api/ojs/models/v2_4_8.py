@@ -18,11 +18,78 @@ DATABASE = 'ojs'
 class Journals(models.Model):
     _DATABASE = DATABASE
 
-    journal_id = models.BigIntegerField(primary_key=True)
-    path = models.CharField(unique=True, max_length=32)
-    seq = models.FloatField()
-    primary_locale = models.CharField(max_length=5)
-    enabled = models.IntegerField()
+    journal_id = models.BigIntegerField(
+        primary_key=True,
+        help_text="""Automatic OJS instance internal id.
+        """)
+    path = models.CharField(
+        unique=True,
+        max_length=32,
+        help_text="""Journal unique identifier.
+        A short word or acronym that identifies the journal. Used in URL.
+        """
+    )
+    seq = models.FloatField(
+        help_text="""Automatic field.
+        Not managed via admin interface.
+        """
+    )
+    primary_locale = models.CharField(
+        max_length=5,
+        help_text="""Form Language.
+        """
+    )
+    enabled = models.IntegerField(
+        help_text="""Enable this journal to appear publicly on the site.
+        """
+    )
+
+    def settings(self, locale=None, name=None):
+        """Returns the setting(s) of this Journal for a specific locale.
+
+        If no locale provided, uses the default locale (provided in the
+        'Form Language' in the admin interface).
+
+        If no name provided, returns all the setting.
+
+        Settings returned are a list of tuples : (name, value, type)
+        """
+        if locale is None:
+            locale = self.primary_locale
+
+        if name is None:
+            results = JournalSettings.objects.filter(
+                journal_id=self.journal_id,
+                locale=locale,
+            )
+        else:
+            results = JournalSettings.objects.filter(
+                journal_id=self.journal_id,
+                locale=locale,
+                name=name,
+            )
+        settings = []
+        for r in results:
+            settings.append(
+                (r.setting_name, r.setting_value, r.setting_type)
+            )
+        return settings
+
+    def title(self, locale=None):
+        """Returns the name of this Journal for a specific locale.
+        If no locale provided, uses the default locale (provided in the
+        'Form Language' in the admin interface).
+        """
+        name, value, type = self.settings(locale, name='title')[0]
+        return value
+
+    def description(self, locale=None):
+        """Returns the description of this Journal for a specific locale.
+        If no locale provided, uses the default locale (provided in the
+        'Form Language' in the admin interface).
+        """
+        name, value, type = self.settings(locale, name='description')[0]
+        return value
 
     def __str__(self):
         return "{} [{}]".format(
@@ -38,11 +105,34 @@ class Journals(models.Model):
 class JournalSettings(models.Model):
     _DATABASE = DATABASE
 
-    journal_id = models.BigIntegerField()
-    locale = models.CharField(max_length=5)
-    setting_name = models.CharField(max_length=255)
-    setting_value = models.TextField(blank=True, null=True)
-    setting_type = models.CharField(max_length=6)
+    journal_id = models.BigIntegerField(
+        help_text="""Journal identifier.
+        Contributes to multiple primary key.
+        """,
+    )
+    locale = models.CharField(
+        max_length=5,
+        help_text="""Language of the settings.
+        Contributes to multiple primary key.
+        """,
+    )
+    setting_name = models.CharField(
+        max_length=255,
+        help_text="""Name (key) of the setting.
+        Contributes to multiple primary key.
+        """,
+    )
+    setting_value = models.TextField(
+        blank=True,
+        null=True,
+        help_text="""Value of the setting.
+        """,
+    )
+    setting_type = models.CharField(
+        max_length=6,
+        help_text="""Type of the setting.
+        """,
+    )
 
     class Meta:
         managed = False
@@ -142,7 +232,8 @@ class Articles(models.Model):
     def from_json(self, data):
         json_data = json.loads(data)
         for k, v in json_data.items():
-            self.date_submitted =
+            #self.date_submitted =
+            pass
 
     class Meta:
         managed = False
