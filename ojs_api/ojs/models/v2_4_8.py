@@ -50,7 +50,7 @@ class Journals(models.Model):
         If no locale provided, uses the default locale (provided in the
         'Form Language' in the admin interface).
 
-        If no name provided, returns all the setting.
+        If no name provided, returns all the settings.
 
         Settings returned are a list of tuples : (name, value, type)
         """
@@ -103,12 +103,31 @@ class Journals(models.Model):
 
 
 class JournalSettings(models.Model):
+    """Settings for a Journal set for a specific locale.
+
+    Here's the settings for Journals (excluding system settings)
+
+    Journal
+    * title
+    * description
+
+    Languages
+    * supportedFormLocales
+    * supportedLocales
+    * supportedSubmissionLocales
+
+    System
+    * ...
+    """
     _DATABASE = DATABASE
 
-    journal_id = models.BigIntegerField(
+    journal_id = models.ForeignKey(
+        'Journals',
+        to_field='journal_id',  # should'nt be necessary
         help_text="""Journal identifier.
         Contributes to multiple primary key.
         """,
+        db_column='journal_id',
     )
     locale = models.CharField(
         max_length=5,
@@ -144,7 +163,10 @@ class Issues(models.Model):
     _DATABASE = DATABASE
 
     issue_id = models.BigIntegerField(primary_key=True)
-    journal_id = models.BigIntegerField()
+    journal_id = models.ForeignKey(
+        'Journals',
+        related_name='issues',
+    )
     volume = models.SmallIntegerField(blank=True, null=True)
     number = models.CharField(max_length=10, blank=True, null=True)
     year = models.SmallIntegerField(blank=True, null=True)
@@ -162,6 +184,58 @@ class Issues(models.Model):
     style_file_name = models.CharField(max_length=90, blank=True, null=True)
     original_style_file_name = models.CharField(max_length=255, blank=True, null=True)
 
+    def settings(self, locale=None, name=None):
+        """Returns the setting(s) of this Issue for a specific locale.
+
+        If no locale provided, uses the default locale of the Journal
+        (provided in the 'Form Language' in the admin interface).
+
+        If no name provided, returns all the settings.
+
+        Settings returned are a list of tuples : (name, value, type)
+        """
+        if locale is None:
+            locale = self.journal_id.primary_locale
+
+        if name is None:
+            results = IssueSettings.objects.filter(
+                issue_id=self.issue_id,
+                locale=locale,
+            )
+        else:
+            results = IssueSettings.objects.filter(
+                issue_id=self.issue_id,
+                locale=locale,
+                name=name,
+            )
+        settings = []
+        for r in results:
+            settings.append(
+                (r.setting_name, r.setting_value, r.setting_type)
+            )
+        return settings
+
+    def title(self, locale=None):
+        """Returns the name of this Issue for a specific locale.
+        If no locale provided, uses the default locale of the Journal
+        (provided in the 'Form Language' in the admin interface).
+        """
+        name, value, type = self.settings(locale, name='title')[0]
+        return value
+
+    def description(self, locale=None):
+        """Returns the description of this Issue for a specific locale.
+        If no locale provided, uses the default locale of the Journal
+        (provided in the 'Form Language' in the admin interface).
+        """
+        name, value, type = self.settings(locale, name='description')[0]
+        return value
+
+    def __str__(self):
+        return "{} [{}]".format(
+            self.issue_id,
+            self.issue_id,
+        )
     class Meta:
         managed = False
         db_table = 'issues'
@@ -186,6 +260,23 @@ class IssueFiles(models.Model):
 
 
 class IssueSettings(models.Model):
+    """Settings of an Issue set for a specific locale.
+
+    Issue
+    * title
+    * description
+
+    Cover (Allowed formats: .gif, .jpg, or .png)
+    * fileName
+    * originalFileName
+    * height
+    * width
+    * coverPageAltText
+    * coverPageDescription
+    * hideCoverPageArchives
+    * hideCoverPageCover
+    * showCoverPage
+    """
     _DATABASE = DATABASE
 
     issue_id = models.BigIntegerField()
